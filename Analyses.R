@@ -3,6 +3,8 @@ require (userfriendlyscience)
 require(ggplot2)
 require(tidyr)
 require(traj)
+require(lme4)
+require(lmerTest)
 
 
 dat <- getData()
@@ -54,31 +56,24 @@ p4 + geom_errorbar(aes(ymin=loneliness-ci, ymax=loneliness+ci), width=.1, positi
   geom_line(aes(group=Gender), position=pd) + geom_point(position=pd)
 
 
+# lines per person
+
+p <- ggplot(dat=dat2, aes(x=wave, y=loneliness)) 
+p + geom_line(aes(group=LongID, color=Gender))
 
 
+# Step 2 Fitting trajectories
+# First construct the correct data frames for the analyses in Traj packages 
+# There are minimal 4 time points necessary!!!
 
 
-# construct the correct data frames for the analyses 
-# there are 4 time points necessary!!!
+datw <- dat1[,c(1,3,4,5,6)]
+#datw <- as.data.frame(a <- as.matrix(datw))
+colnames(datw) <- c("ID","T1","T2","T3","T4")
 
-head(example.data$data)
-head(example.data$time)
 
-head(datlist$data)
-head(datlist$time)
-
-str(example.data)
-str(datlist)
-
-datw <- data_wide[,c(1,12,13,14)]
-datw <- as.data.frame(a <- as.matrix(datw))
-colnames(datw) <- c("ID","T1","T2", "T3")
-
-datw$T0 <- datw$T3 + (rnorm(129,0,.1))  # create fourth time point (random)
-
-dattime <- as.data.frame(cbind(datw[,1], matrix(rep(c(1:3),129), nrow=129, byrow = TRUE)))
-colnames(dattime) <- c("ID","t1","t2", "t3")
-dattime$t0 <- 4
+dattime <- as.data.frame(cbind(datw[,1], matrix(rep(c(1:4),129), nrow=129, byrow = TRUE)))
+colnames(dattime) <- c("ID","t1","t2", "t3","t4")
 
 datlist <- list(data=datw,time=dattime)
 
@@ -93,7 +88,7 @@ print(s2$princ.fac$communality)
 print(s2$princ.fac$values)
 print(s2$princ.fac$fit)
 
-s3 = step3clusters(s2, nclusters = 1)
+s3 = step3clusters(s2, nclusters = 3)
 
 s3$clust.distr
 
@@ -103,3 +98,12 @@ plotMedTraj(s3)
 plotBoxplotTraj(s3)
 plotCombTraj(s3)
 s3
+
+# Step 3 Fitting single traject with random variation
+
+
+model <- lmer(loneliness ~ 1 + (1|wave), dat=dat2)
+model <- lmer(loneliness ~ waven*Gender + (waven|LongID), dat=dat2)
+
+summary(model)
+
